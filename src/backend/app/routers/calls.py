@@ -1,0 +1,257 @@
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query, Body
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import List
+from datetime import datetime
+import pandas as pd
+
+from app.db.database import get_db
+from app.models.call import Call, CallStatus, Priority, Campaign
+from app.models.user import User, UserRole
+from app.models.audit import AuditLog
+from app.schemas.call import CallCreate, CallResponse
+from app.schemas.user import EmployeeListResponse
+from app.core.dependencies import get_current_user, require_manager
+
+router = APIRouter(prefix="/calls", tags=["calls"])
+
+
+# =====================================================
+# AUDIT HELPER
+# =====================================================
+
+def log_manager_action(db: Session, manager_id: int, action_type: str, details: str = None):
+    audit = AuditLog(manager_id=manager_id, action_type=action_type, details=details)
+    db.add(audit)
+    db.commit()
+
+
+# =====================================================
+# GET ALL CALLS (Manager + Chief)
+# =====================================================
+
+@router.get("/", response_model=List[CallResponse])
+def read_calls(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20,
+):
+
+    if current_user.role not in [UserRole.MANAGER, UserRole.CHIEF]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return db.query(Call).offset(skip).limit(limit).all()
+
+
+# =====================================================
+# EMPLOYEE - GET MY CALLS
+# =====================================================
+
+@router.get("/my", response_model=List[CallResponse])
+def my_calls(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+
+    if current_user.role == UserRole.MANAGER:
+        return db.query(Call).all()
+
+    if current_user.team_id:
+        return db.query(Call).filter(
+            (Call.assigned_to_id == current_user.id) |
+            (Call.team_id == current_user.team_id)
+        ).all()
+
+    return db.query(Call).filter(Call.assigned_to_id == current_user.id).all()
+
+@router.get("/my-progress")
+def my_progress(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    if current_user.role == UserRole.MANAGER:
+        query = db.query(Call)
+    else:
+        if current_user.team_id:
+            query = db.query(Call).filter(
+                (Call.assigned_to_id == current_user.id) |
+                (Call.team_id == current_user.team_id)
+            )
+        else:
+            query = db.query(Call).filter(
+                Call.assigned_to_id == current_user.id
+            )
+
+    total_calls = query.count()
+    completed_calls = query.filter(
+        Call.status == CallStatus.CONNECTED
+    ).count()
+
+    pending_calls = query.filter(
+        Call.status != CallStatus.CONNECTED
+    ).count()
+
+    calls = query.order_by(Call.id.desc()).limit(20).all()
+
+    return {
+        "total_calls": total_calls,
+        "completed_calls": completed_calls,
+        "pending_calls": pending_calls,
+        "calls": calls
+    }
+# =====================================================
+# UPDATE CALL STATUS (Employee / Manager)
+# =====================================================
+
+@router.patch("/{call_id}/update", response_model=CallResponse)
+def update_call(
+    call_id: int,
+    status: str = Body(None),
+    duration: int = Body(None),
+    remarks: str = Body(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    call = db.query(Call).filter(Call.id == call_id).first()
+
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    if status:
+        mapped = status.upper()
+
+        status_map = {
+            "ATTENDED": CallStatus.CONNECTED,
+            "CONNECTED": CallStatus.CONNECTED,
+            "NOT_ATTENDED": CallStatus.FAILED,
+            "FAILED": CallStatus.FAILED,
+            "NOT_REACHABLE": CallStatus.CALLBACK_REQUIRED,
+            "CALLBACK_REQUIRED": CallStatus.CALLBACK_REQUIRED,
+            "PENDING": CallStatus.PENDING
+        }
+
+        if mapped not in status_map:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {mapped}")
+
+        call.status = status_map[mapped]
+
+    if duration is not None:
+        call.duration = duration
+
+    if remarks:
+        call.remarks = remarks
+
+    db.commit()
+    db.refresh(call)
+
+    return call
+
+
+# =====================================================
+# CREATE CALL (Manager Only)
+# =====================================================
+
+@router.post("/", response_model=CallResponse)
+def create_call_api(
+    call: CallCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
+
+    new_call = Call(
+        customer_name=call.customer_name,
+        phone=call.phone,
+        priority=Priority[call.priority],
+        campaign=call.campaign,
+        remarks=call.remarks,
+        status=CallStatus.PENDING
+    )
+
+    db.add(new_call)
+    db.commit()
+    db.refresh(new_call)
+
+    log_manager_action(
+        db,
+        manager_id=current_user.id,
+        action_type="CREATE_CALL",
+        details=f"Call {new_call.customer_name} created"
+    )
+
+    return new_call
+
+
+# =====================================================
+# DELETE CALL (Manager Only)
+# =====================================================
+
+@router.delete("/{call_id}")
+def delete_call_api(
+    call_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
+
+    call = db.query(Call).filter(Call.id == call_id).first()
+
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    db.delete(call)
+    db.commit()
+
+    return {"message": "Call deleted"}
+
+
+# =====================================================
+# GET EMPLOYEES (Manager + Chief)
+# =====================================================
+
+@router.get("/employees", response_model=EmployeeListResponse)
+def get_employees(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    if current_user.role not in [UserRole.MANAGER, UserRole.CHIEF]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    employees = db.query(User).filter(User.role == UserRole.EMPLOYEE).all()
+
+    return {
+        "total": len(employees),
+        "skip": 0,
+        "limit": len(employees),
+        "employees": employees
+    }
+
+
+# =====================================================
+# ASSIGN CALL TO EMPLOYEE
+# =====================================================
+
+@router.patch("/{call_id}/assign")
+def assign_call(
+    call_id: int,
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
+
+    call = db.query(Call).filter(Call.id == call_id).first()
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    employee = db.query(User).filter(
+        User.id == employee_id,
+        User.role == UserRole.EMPLOYEE
+    ).first()
+
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    call.assigned_to_id = employee.id
+    db.commit()
+    db.refresh(call)
+
+    return {"message": f"Assigned to {employee.name}"}
