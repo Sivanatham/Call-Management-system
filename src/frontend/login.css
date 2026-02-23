@@ -6,16 +6,18 @@
 }
 
 .main-container {
-  height: 100vh;
+  min-height: 100vh;
   background: #b9a7e6;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px;
 }
 
 .login-wrapper {
-  width: 850px;
-  height: 450px;
+  width: 100%;
+  max-width: 850px;
+  min-height: 450px;
   display: flex;
   border-radius: 20px;
   overflow: hidden;
@@ -23,36 +25,78 @@
   background: white;
 }
 
-/* LEFT PANEL */
-.left-panel {
-  flex: 1;
-  background: linear-gradient(135deg, #7f5af0, #5f3dc4);
-  color: white;
-  padding: 60px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+/* DESKTOP STYLES */
+@media (min-width: 768px) {
+  .login-wrapper {
+    width: 850px;
+    height: 450px;
+  }
+  
+  .left-panel {
+    flex: 1;
+    background: linear-gradient(135deg, #7f5af0, #5f3dc4);
+    color: black;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+ 
+  
+  .left-panel p {
+    font-size: 14px;
+    opacity: 0.9;
+  }
+  
+  .right-panel {
+    flex: 1;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 }
 
-.left-panel h1 {
-  font-size: 32px;
-  margin-bottom: 15px;
+/* MOBILE STYLES */
+@media (max-width: 767px) {
+  .main-container {
+    padding: 15px;
+  }
+  
+  .login-wrapper {
+    min-height: 500px;
+    flex-direction: column;
+  }
+  
+  .left-panel {
+    padding: 40px 30px;
+    text-align: center;
+  }
+  
+  .left-panel h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  
+  .left-panel p {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  .right-panel {
+    padding: 40px 30px;
+    flex: none;
+  }
+  
+  .right-panel h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
 }
 
-.left-panel p {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-/* RIGHT PANEL */
-.right-panel {
-  flex: 1;
-  padding: 60px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
+/* COMMON FORM STYLES */
 .right-panel h2 {
   margin-bottom: 20px;
   color: #333;
@@ -60,36 +104,111 @@
 
 .right-panel input {
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   margin-bottom: 15px;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #ddd;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .right-panel input:focus {
   outline: none;
   border-color: #7f5af0;
+  box-shadow: 0 0 0 3px rgba(127, 90, 240, 0.1);
 }
 
 .right-panel button {
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   background: linear-gradient(135deg, #7f5af0, #5f3dc4);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
+  font-size: 16px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s;
 }
 
 .right-panel button:hover {
   opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.right-panel button:active {
+  transform: translateY(0);
 }
 
 .error {
-  color: red;
+  color: #dc3545;
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* TABLET OPTIMIZATION */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .login-wrapper {
+    width: 90%;
+    max-width: 700px;
+  }
+  
+  .left-panel,
+  .right-panel {
+    padding: 50px 30px;
+  }
+  
+  .left-panel h1 {
+    font-size: 28px;
+    color:black ;
+    z-index: 1;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .main-container {
+    padding: 10px;
+  }
+  
+  .login-wrapper {
+    min-height: 480px;
+    border-radius: 16px;
+  }
+  
+  .left-panel {
+    padding: 30px 20px;
+  }
+  
+  .left-panel h1 {
+    font-size: 24px;
+  }
+  
+  .left-panel p {
+    font-size: 15px;
+    z-index: 1;
+    color: black;
+  }
+  
+  .right-panel {
+    padding: 30px 20px;
+  }
+  .left-panel h1  {
+    font-size: 28px;
+    color:black ;
+    z-index: 1;
+  }
+  .right-panel h2 {
+    font-size: 22px;
+  }
+  
+  .right-panel input,
+  .right-panel button {
+    padding: 14px;
+    font-size: 16px;
+  }
 }

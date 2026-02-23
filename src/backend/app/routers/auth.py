@@ -8,7 +8,8 @@ from passlib.context import CryptContext
 from jose import jwt
 from app.core.dependencies import require_manager
 from app.core.config import SECRET_KEY, ALGORITHM
-
+from datetime import datetime, timedelta, timezone
+from fastapi.security import OAuth2PasswordRequestForm
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -51,19 +52,31 @@ def register_user(user: UserRegister, db: Session = Depends(get_db)):
 # ===============================
 # LOGIN
 # ===============================
+
 @router.post("/login")
-def login(user: LoginRequest, db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
 
-    db_user = get_user_by_email(db, user.email)
+    db_user = get_user_by_email(db, form_data.username)
 
-    if not db_user or not verify_password(user.password, db_user.password):
+    if not db_user or not verify_password(form_data.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token_data = {"sub": str(db_user.id)}
+    ACCESS_TOKEN_EXPIRE_HOURS = 12
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+
+    token_data = {
+        "sub": str(db_user.id),
+        "exp": expire
+    }
+
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
     return {
         "access_token": token,
+        "token_type": "bearer",
         "user": {
             "id": db_user.id,
             "name": db_user.name,
@@ -71,8 +84,6 @@ def login(user: LoginRequest, db: Session = Depends(get_db)):
             "role": db_user.role.value
         }
     }
-
-
 # ===============================
 # MANAGER CREATES EMPLOYEE
 # ===============================

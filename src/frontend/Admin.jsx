@@ -175,6 +175,30 @@ const AdminPanel = () => {
     }
   };
 
+
+  const handleClearHistory = async () => {
+  const token = localStorage.getItem("token");
+
+  if (!window.confirm("Are you sure you want to delete all call history?")) return;
+
+  try {
+    await fetch("http://localhost:8000/calls/clear-history", {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    await loadCustomers();
+    await loadDashboard();
+
+    alert("Call history cleared successfully");
+  } catch (err) {
+    alert("Failed to clear history");
+  }
+};
+
+
   const handleExcelUpload = async (data) => {
     try {
       const token = localStorage.getItem("token");
@@ -208,8 +232,8 @@ const AdminPanel = () => {
       await loadDashboard();
 
       alert("Excel uploaded and tasks assigned!");
-    } catch {
-      alert("Upload failed");
+    } catch (err) {
+      alert("Something went wrong during Excel upload or task assignment");
     }
   };
 
@@ -231,14 +255,13 @@ const AdminPanel = () => {
       <main className="flex-1 p-6 lg:ml-64">
         {activeSection === "dashboard" && (
           <>
-            <DashboardCards stats={stats} />
+            <DashboardCards stats={stats}  />
             <DashboardCharts stats={stats} />
           </>
         )}
 
         {activeSection === "employees" && (
           <div className="space-y-6">
-            <EmployeeForm onSubmit={handleAddEmployee} />
             <TeamManagement
               teams={teams}
               employees={employees}
@@ -248,6 +271,8 @@ const AdminPanel = () => {
               teams={teams}
               onSubmit={handleExcelUpload}
             />
+            <EmployeeForm onSubmit={handleAddEmployee} />
+            
           </div>
         )}
               {activeSection === "addCustomer" && (
@@ -256,7 +281,7 @@ const AdminPanel = () => {
         </div>
       )}
         {activeSection === "completed" && (
-          <TasksTable status="CONNECTED" title="Completed Tasks" />
+          <TasksTable status="CONNECTED" title="Completed Tasks"  />
         )}
 
         {activeSection === "pending" && (
@@ -274,7 +299,7 @@ const AdminPanel = () => {
               teams={teams}
               onSubmit={handleExcelUpload}
             />
-            <ClearHistory />
+            <ClearHistory onClearHistory={handleClearHistory} />
           </div>
         )}
       </main>

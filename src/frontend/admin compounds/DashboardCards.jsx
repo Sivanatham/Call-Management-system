@@ -87,21 +87,21 @@ const DashboardCards = ({ stats }) => {
             className={`glass-effect rounded-xl p-6 card-hover border-2 ${colors.border} animate-fade-in`}
             style={{ animationDelay: `${index * 100}ms` }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${colors.iconBg} text-white`}>
-                <Icon size={24} />
+            <div className="flex items-center justify-between mb-4 ">
+              <div className={`p-3  rounded-lg ${colors.iconBg} text-white `}>
+                <Icon size={24}/>
               </div>
             </div>
             
-            <h3 className="text-gray-600 text-sm font-medium mb-1">
+            <h3 className="text-gray-600 text-sm font-medium mb-1 text-center">
               {card.title}
             </h3>
             
-            <p className="text-3xl font-bold text-gray-900 mb-2">
+            <p className="text-3xl font-bold text-gray-900 mb-2 text-center">
               {card.value}
             </p>
             
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 text-center">
               {card.description}
             </p>
           </div>

@@ -11,8 +11,7 @@ from app.core.config import SECRET_KEY, ALGORITHM
 # ============================================
 # OAuth2 Bearer Token
 # ============================================
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # ============================================
 # Get Current Logged-in User

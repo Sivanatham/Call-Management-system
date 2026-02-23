@@ -1,60 +1,46 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-
-import EmployeeCallingPanel from "./frontend/EmployeeCallingPanel";
-import Ceo from "./frontend/Ceo";
-import AdminPanel from "./frontend/Admin";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./frontend/login";
+import Employee from "./frontend/EmployeeCallingPanel";
+import Manager from "./frontend/Admin";
+import Chief from "./frontend/Ceo";
+import ProtectedRoute from "../src/ProtectedRoute";
 
 function App() {
-  const [userRole, setUserRole] = useState(null);
-
-  // 🔥 Restore role after refresh
-  useEffect(() => {
-    const savedRole = localStorage.getItem("role");
-    if (savedRole) {
-      setUserRole(savedRole);
-    }
-  }, []);
-
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
 
-        <Route
-          path="/"
-          element={<Login setUserRole={setUserRole} />}
-        />
+        <Route path="/" element={<Login />} />
 
         <Route
           path="/employee"
           element={
-            userRole === "employee"
-              ? <EmployeeCallingPanel />
-              : <Navigate to="/" />
+            <ProtectedRoute role="employee">
+              <Employee />
+            </ProtectedRoute>
           }
         />
 
         <Route
           path="/manager"
           element={
-            userRole === "manager"
-              ? <AdminPanel />
-              : <Navigate to="/" />
+            <ProtectedRoute role="manager">
+              <Manager />
+            </ProtectedRoute>
           }
         />
 
         <Route
           path="/chief"
           element={
-            userRole === "chief"
-              ? <Ceo />
-              : <Navigate to="/" />
+            <ProtectedRoute role="chief">
+              <Chief />
+            </ProtectedRoute>
           }
         />
 
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

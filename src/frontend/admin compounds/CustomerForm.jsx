@@ -83,14 +83,21 @@ const CustomerForm = () => {
         <div className="form-input-with-icon">
           <Phone className="icon" size={20} />
           <input
-            type="tel"
-            name="phone"
-            placeholder="Customer Phone"
-            value={formData.phone}
-            onChange={handleChange}
-            required
-            className="form-input"
-          />
+  name="phone"
+  placeholder="Phone"
+  value={formData.phone}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+    if (value.length <= 10) {
+      setFormData({ ...formData, phone: value });
+    }
+  }}
+  maxLength={10}
+  inputMode="numeric"
+  pattern="\d{10}"
+  required
+  style={inputStyle}
+/>
         </div>
 
         {/* Priority */}

@@ -69,7 +69,7 @@ const AssignCustomers = ({ customers, teams, onSubmit }) => {
             <button
               type="button"
               onClick={handleSelectAll}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="text-sm text-primary-100 hover:text-primary-700 font-medium"
             >
               {selectedCustomers.length === customers.length ? 'Deselect All' : 'Select All'}
             </button>
@@ -125,7 +125,7 @@ const AssignCustomers = ({ customers, teams, onSubmit }) => {
         <button
           type="submit"
           disabled={!selectedTeam || selectedCustomers.length === 0}
-          className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary w-full disabled:opacity-10 disabled:cursor-not-allowed"
         >
           <CheckSquare size={20} className="inline mr-2" />
           Assign Selected Customers ({selectedCustomers.length})

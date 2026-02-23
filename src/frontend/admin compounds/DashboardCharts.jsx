@@ -23,27 +23,27 @@ const DashboardCharts = ({ stats }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       {/* Task Status Chart */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <BarChart3 className="text-blue-600" size={24} />
+      <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200 ">
+        <div className="flex items-center gap-3 mb-6 ">
+          <div className="p-2 bg-blue-100 rounded-lg ">
+            <BarChart3 className="text-blue-600 " size={24} />
           </div>
           <h3 className="text-xl font-bold text-gray-800">Task Status Distribution</h3>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           {statusData.map((item, idx) => (
             <div key={idx}>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                <span className="text-sm font-bold text-gray-900">{item.value}</span>
+              <div className="flex justify-between mb-2 ">
+                <span className="text-sm font-medium text-gray-700 ">{item.label}</span>
+                <span className="text-sm font-bold text-gray-900 ">{item.value}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className="h-3 rounded-full transition-all duration-500"
                   style={{
                     width: `${item.label === 'Completed' ? completedPercent : pendingPercent}%`,
-                    backgroundColor: item.color
+                    backgroundColor: item.color 
                   }}
                 />
               </div>

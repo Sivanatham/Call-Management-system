@@ -1,11 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import Chart from "chart.js/auto";
+import Chart, { Colors } from "chart.js/auto";
 import api from "./api";
 import "./ceo.css";
 
 function Ceo() {
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
+  const performersRef = useRef(null);
+  const performersInstance = useRef(null);
+  const employeesRef = useRef(null);
+  const employeesInstance = useRef(null);
+  const trendsRef = useRef(null);
+  const trendsInstance = useRef(null);
 
   const [dashboard, setDashboard] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -44,6 +50,7 @@ function Ceo() {
     }
   };
 
+  // Existing doughnut chart useEffect
   useEffect(() => {
     if (dashboard && chartRef.current) {
       if (chartInstance.current) chartInstance.current.destroy();
@@ -59,9 +66,9 @@ function Ceo() {
               data: Object.values(status),
               backgroundColor: [
                 "#22c55e",
-                "#ef4444",
-                "#3b82f6",
-                "#f59e0b"
+                "#f59e0b",
+                "#3b82f6"
+                
               ]
             }
           ]
@@ -77,33 +84,128 @@ function Ceo() {
     }
   }, [dashboard]);
 
+  // New: Bar chart for top performers
+  useEffect(() => {
+    if (dashboard?.top_performers && performersRef.current) {
+      if (performersInstance.current) performersInstance.current.destroy();
+
+      const data = dashboard.top_performers.slice(0, 5); // Top 5
+      performersInstance.current = new Chart(performersRef.current, {
+        type: "bar",
+        data: {
+          labels: data.map(p => p.name),
+          datasets: [{
+            label: "Completed Calls",
+            data: data.map(p => p.completed_calls),
+            backgroundColor: "#3b82f6",
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+  }, [dashboard]);
+
+  // New: Horizontal bar for employee assignments (assume employees have 'assigned_calls')
+  useEffect(() => {
+    if (employees.length && employeesRef.current) {
+      if (employeesInstance.current) employeesInstance.current.destroy();
+
+      const data = employees.slice(0, 10); // Top 10
+      employeesInstance.current = new Chart(employeesRef.current, {
+        type: "bar",
+        data: {
+          labels: data.map(e => e.name),
+          datasets: [{
+            label: "Assigned Calls",
+            data: data.map(e => e.assigned_calls || 0), // Fallback if field missing
+            backgroundColor: "#f59e0b",
+            borderRadius: 8
+          }]
+        },
+        options: {
+          indexAxis: 'y', // Horizontal bars
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true }
+          }
+        }
+      });
+    }
+  }, [employees]);
+
+  // New: Line chart for calls trend (group calls by date; simplistic example)
+  useEffect(() => {
+    if (calls.length && trendsRef.current) {
+      if (trendsInstance.current) trendsInstance.current.destroy();
+
+      // Mock grouping by date (adapt to call.created_at or similar)
+      const dates = [...new Set(calls.map(c => c.created_date || 'Recent').slice(0, 10))];
+      const counts = dates.map(date => calls.filter(c => (c.created_date || 'Recent') === date).length);
+
+      trendsInstance.current = new Chart(trendsRef.current, {
+        type: "line",
+        data: {
+          labels: dates,
+          datasets: [{
+            label: "Calls",
+            data: counts,
+            borderColor: "#22c55e",
+            backgroundColor: "rgba(34, 197, 94, 0.2)",
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+  }, [calls]);
+
   return (
     <div className="crm-container">
-
-      {/* SIDEBAR */}
-      <div className="sidebar">
-        <h2>📊 CMS</h2>
-        <a className="active">Dashboard</a>
-        <a>Employees</a>
-        <a>Calls</a>
-        <a>Reports</a>
-      </div>
-
-      {/* MAIN */}
       <div className="main-content">
-
         <div className="top-header">
           <h1>CEO Dashboard</h1>
           <p>Business performance overview</p>
         </div>
 
-        {/* SUMMARY CARDS */}
         {dashboard && (
           <div className="summary-grid">
             <div className="summary-card blue">
               <h3>Total Calls</h3>
               <p>{dashboard.total_calls}</p>
             </div>
+            <div className="summary-card purple">
+      <h3>Connected</h3>
+      <p>{dashboard.completed_calls}</p>
+    </div>
+
+    <div className="summary-card orange">
+      <h3 >Pending</h3>
+      <p>{dashboard.pending_calls}</p>
+    </div>
             <div className="summary-card green">
               <h3>Assigned</h3>
               <p>{dashboard.assigned_calls}</p>
@@ -119,7 +221,6 @@ function Ceo() {
           </div>
         )}
 
-        {/* CHART */}
         <div className="box">
           <h2>📌 Call Status Distribution</h2>
           <div className="chart-box">
@@ -127,11 +228,17 @@ function Ceo() {
           </div>
         </div>
 
-        {/* TOP PERFORMERS */}
+
+        {/* New: Employee Assignments Chart */}
+        
+
+        {/* New: Calls Trend Chart */}
+       
+        {/* Existing sections (table versions remain for detail) */}
         {dashboard && (
           <div className="box">
             <h2>🏆 Top Performers</h2>
-            <table>
+            <table className="clean-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -150,10 +257,9 @@ function Ceo() {
           </div>
         )}
 
-        {/* EMPLOYEES */}
         <div className="box">
           <h2>👥 Employees</h2>
-          <table>
+          <table className="clean-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -173,10 +279,9 @@ function Ceo() {
           </table>
         </div>
 
-        {/* CALL HISTORY */}
         <div className="box">
           <h2>📞 Recent Calls</h2>
-          <table>
+          <table className="clean-table">
             <thead>
               <tr>
                 <th>Customer</th>
@@ -201,7 +306,6 @@ function Ceo() {
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );

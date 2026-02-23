@@ -33,15 +33,9 @@ def log_manager_action(db: Session, manager_id: int, action_type: str, details: 
 @router.get("/", response_model=List[CallResponse])
 def read_calls(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 20,
+    current_user=Depends(get_current_user)
 ):
-
-    if current_user.role not in [UserRole.MANAGER, UserRole.CHIEF]:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    return db.query(Call).offset(skip).limit(limit).all()
+    return db.query(Call).all()
 
 
 # =====================================================
@@ -146,7 +140,106 @@ def update_call(
 
     return call
 
+@router.post("/", response_model=CallResponse)
+def create_call_api(
+    call: CallCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
 
+    # Validate priority safely
+    try:
+        priority_enum = Priority[call.priority.name] if isinstance(call.priority, Priority) else Priority[call.priority]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid priority")
+
+    new_call = Call(
+        customer_name=call.customer_name,
+        phone=call.phone,
+        priority=priority_enum,
+        campaign=call.campaign,
+        remarks=call.remarks,
+        status=CallStatus.PENDING
+    )
+
+    db.add(new_call)
+    db.commit()
+    db.refresh(new_call)
+
+    log_manager_action(
+        db,
+        manager_id=current_user.id,
+        action_type="CREATE_CALL",
+        details=f"Call {new_call.customer_name} created"
+    )
+
+    return new_call
+# =====================================================
+# CREATE CALL (Manager Only)
+# =====================================================
+# =====================================================
+# BULK UPLOAD
+# =====================================================
+
+@router.post("/bulk")
+def bulk_upload_calls(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
+    try:
+        df = pd.read_excel(file.file)
+
+        required_columns = ["customer_name", "phone", "priority", "campaign"]
+
+        # Check required columns
+        for col in required_columns:
+            if col not in df.columns:
+                raise HTTPException(status_code=400, detail=f"Missing column: {col}")
+
+        inserted = 0
+        skipped_rows = []
+
+        for index, row in df.iterrows():
+            try:
+                # Validate required fields
+                if pd.isna(row["customer_name"]) or pd.isna(row["phone"]):
+                    skipped_rows.append(f"Row {index+2}: Missing name or phone")
+                    continue
+
+                # Validate priority safely
+                try:
+                    priority_enum = Priority[str(row["priority"]).upper()]
+                except:
+                    skipped_rows.append(f"Row {index+2}: Invalid priority")
+                    continue
+
+                new_call = Call(
+                    customer_name=row["customer_name"],
+                    phone=str(row["phone"]),
+                    priority=priority_enum,
+                    campaign=row.get("campaign"),
+                    remarks=row.get("remarks"),
+                    status=CallStatus.PENDING
+                )
+
+                db.add(new_call)
+                inserted += 1
+
+            except Exception as e:
+                skipped_rows.append(f"Row {index+2}: {str(e)}")
+
+        db.commit()
+
+        return {
+            "message": "Upload completed",
+            "inserted_rows": inserted,
+            "skipped_count": len(skipped_rows),
+            "skipped_details": skipped_rows
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 # =====================================================
 # CREATE CALL (Manager Only)
 # =====================================================
@@ -157,11 +250,15 @@ def create_call_api(
     db: Session = Depends(get_db),
     current_user=Depends(require_manager)
 ):
+    try:
+        priority_enum = Priority[call.priority]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid priority")
 
     new_call = Call(
         customer_name=call.customer_name,
         phone=call.phone,
-        priority=Priority[call.priority],
+        priority=priority_enum,
         campaign=call.campaign,
         remarks=call.remarks,
         status=CallStatus.PENDING
@@ -181,6 +278,22 @@ def create_call_api(
     return new_call
 
 
+
+
+
+@router.delete("/clear-history")
+def clear_history(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_manager)
+):
+
+    deleted = db.query(Call).delete(synchronize_session=False)
+    db.commit()
+
+    return {
+        "message": "All call history deleted successfully",
+        "deleted_count": deleted
+    }
 # =====================================================
 # DELETE CALL (Manager Only)
 # =====================================================
@@ -202,6 +315,49 @@ def delete_call_api(
 
     return {"message": "Call deleted"}
 
+
+@router.post("/assign-team/{team_id}")
+def assign_calls_to_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(status_code=403, detail="Manager only")
+
+    # Get employees in team
+    employees = db.query(User).filter(
+        User.team_id == team_id,
+        User.role == UserRole.EMPLOYEE
+    ).all()
+
+    if not employees:
+        raise HTTPException(status_code=400, detail="No employees in team")
+
+    # Get ALL unassigned calls
+    unassigned_calls = db.query(Call).filter(
+        Call.assigned_to_id.is_(None)
+    ).all()
+
+    total_calls = len(unassigned_calls)
+    num_employees = len(employees)
+
+    if total_calls == 0:
+        return {"message": "No unassigned calls"}
+
+    # ROUND ROBIN DISTRIBUTION
+    for index, call in enumerate(unassigned_calls):
+        employee = employees[index % num_employees]
+        call.assigned_to_id = employee.id
+
+    db.commit()
+
+    return {
+        "message": "Calls distributed equally",
+        "total_calls": total_calls,
+        "employees": num_employees
+    }
 
 # =====================================================
 # GET EMPLOYEES (Manager + Chief)

@@ -10,20 +10,23 @@ const ExcelUpload = ({ onSubmit }) => {
   });
 
   const fetchTeams = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/teams/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTeams(data);
-      }
-    } catch (err) {
-      console.log("Team fetch failed:", err);
+  try {
+    const res = await fetch("http://localhost:8000/teams/", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setTeams(data);
     }
-  };
+
+  } catch (err) {
+    console.log("Team fetch failed:", err);
+  }
+};
 
   useEffect(() => {
     fetchTeams();
