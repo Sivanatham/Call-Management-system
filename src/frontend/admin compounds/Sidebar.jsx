@@ -1,24 +1,28 @@
 import React from 'react';
-import { 
-  BarChart3, Users, CheckCircle, Clock, 
-  RefreshCw, LogOut, Menu, UserPlus, X 
+import {
+  BarChart3, Users, CheckCircle, Clock,
+  RefreshCw, LogOut, Menu, UserPlus, X
 } from 'lucide-react';
 
 const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMenuToggle }) => {
+
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'employees', label: 'Employees', icon: Users },
-    { id: 'addCustomer', label: 'Add Customer', icon: UserPlus },
-    { id: 'completed', label: 'Completed Works', icon: CheckCircle },
-    { id: 'pending', label: 'Pending Works', icon: Clock },
-    { id: 'reassign', label: 'Reassign Works', icon: RefreshCw },
+    { id: 'dashboard',     label: 'Dashboard',      icon: BarChart3 },
+    { id: 'employees',     label: 'Employees',      icon: Users },
+    { id: 'assignedTasks', label: 'Assigned Tasks', icon: CheckCircle },
+    { id: 'addCustomer',   label: 'Add Customer',   icon: UserPlus },
+    { id: 'completed',     label: 'Completed Works', icon: CheckCircle },
+    { id: 'pending',       label: 'Pending Works',    icon: Clock },
+    { id: 'reassign',      label: 'Reassign Works',   icon: RefreshCw },
   ];
+
+  const handleClick = (item) => {
+    onSectionChange(item.id);
+    if (window.innerWidth < 1024) onMobileMenuToggle();
+  };
 
   return (
     <>
-      {/* Using a standard style tag without the 'jsx' attribute 
-          to avoid the React boolean warning entirely.
-      */}
       <style dangerouslySetInnerHTML={{ __html: `
         .mobile-menu-button {
           position: fixed;
@@ -87,6 +91,7 @@ const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMen
           cursor: pointer;
           transition: all 0.2s;
           text-align: left;
+          justify-content: flex-start;
         }
 
         .sidebar-menu-item:hover {
@@ -109,21 +114,18 @@ const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMen
         }
       `}} />
 
-      {/* Toggle Button */}
-      <button 
+      <button
         className="mobile-menu-button lg:hidden"
         onClick={onMobileMenuToggle}
       >
         {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Overlay */}
-      <div 
+      <div
         className={`sidebar-overlay ${isMobileMenuOpen ? 'active' : ''}`}
         onClick={onMobileMenuToggle}
       />
 
-      {/* Sidebar */}
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="p-6 border-b border-white/10">
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -137,10 +139,7 @@ const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMen
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  onSectionChange(item.id);
-                  if(window.innerWidth < 1024) onMobileMenuToggle();
-                }}
+                onClick={() => handleClick(item)}
                 className={`sidebar-menu-item ${activeSection === item.id ? 'active' : ''}`}
               >
                 <Icon size={20} />
@@ -151,7 +150,7 @@ const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMen
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <button 
+          <button
             className="sidebar-menu-item text-red-300 hover:text-red-100"
             onClick={() => { localStorage.clear(); window.location.href = '/'; }}
           >

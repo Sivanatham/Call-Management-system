@@ -4,7 +4,7 @@ from app.db.database import get_db
 from app.models.team import Team
 from app.models.user import User, UserRole
 from app.models.call import Call
-from app.core.dependencies import require_manager, require_employee
+from app.core.dependencies import require_manager, require_employee, get_current_user
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -32,7 +32,7 @@ def create_team(data: dict, db: Session = Depends(get_db), current_user=Depends(
 # Get All Teams
 # =========================
 @router.get("/")
-def get_teams(db: Session = Depends(get_db), current_user=Depends(require_manager)):
+def get_teams(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return db.query(Team).all()
 
 
@@ -40,7 +40,7 @@ def get_teams(db: Session = Depends(get_db), current_user=Depends(require_manage
 # Assign Employee To Team
 # =========================
 @router.patch("/assign")
-def assign_employee(data: dict, db: Session = Depends(get_db), current_user=Depends(require_manager)):
+def assign_employee(data: dict, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     team_id = data.get("team_id")
     employee_id = data.get("employee_id")
 
@@ -65,7 +65,7 @@ def assign_employee(data: dict, db: Session = Depends(get_db), current_user=Depe
 def assign_task_to_team(
     data: dict,
     db: Session = Depends(get_db),
-    current_user=Depends(require_manager)
+    current_user=Depends(get_current_user)
 ):
     team_id = data.get("team_id")
     call_id = data.get("call_id")

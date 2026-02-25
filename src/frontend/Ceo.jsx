@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import Chart, { Colors } from "chart.js/auto";
+
 import api from "./api";
+import { useNavigate } from "react-router-dom";
 import "./ceo.css";
 
 function Ceo() {
@@ -30,6 +32,13 @@ function Ceo() {
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");   // make sure your login route is /login
   };
 
   const loadEmployees = async () => {
@@ -68,7 +77,7 @@ function Ceo() {
                 "#22c55e",
                 "#f59e0b",
                 "#3b82f6"
-                
+
               ]
             }
           ]
@@ -187,25 +196,33 @@ function Ceo() {
     <div className="crm-container">
       <div className="main-content">
         <div className="top-header">
-          <h1>CEO Dashboard</h1>
-          <p>Business performance overview</p>
-        </div>
+          <div className="header-text">
+            <h1>CEO Dashboard</h1>
+            <p>Business performance overview</p>
+          </div>
 
+          <button
+            onClick={handleLogout}
+            className="logout-btn"
+          >
+            Logout
+          </button>
+        </div>
         {dashboard && (
           <div className="summary-grid">
             <div className="summary-card blue">
               <h3>Total Calls</h3>
               <p>{dashboard.total_calls}</p>
             </div>
-            <div className="summary-card purple">
-      <h3>Connected</h3>
-      <p>{dashboard.completed_calls}</p>
-    </div>
+            <div className="summary-card purple" style={{ borderTop: '4px solid #fd2ed3', borderLeft: '4px solid #fd2ed3' }}>
+              <h3>Connected</h3>
+              <p>{dashboard.completed_calls}</p>
+            </div>
 
-    <div className="summary-card orange">
-      <h3 >Pending</h3>
-      <p>{dashboard.pending_calls}</p>
-    </div>
+            <div className="summary-card orange" style={{ borderTop: '4px solid #f5661f', borderLeft: '4px solid #f5661f' }}>
+              <h3 >Pending</h3>
+              <p>{dashboard.pending_calls}</p>
+            </div>
             <div className="summary-card green">
               <h3>Assigned</h3>
               <p>{dashboard.assigned_calls}</p>
@@ -230,10 +247,10 @@ function Ceo() {
 
 
         {/* New: Employee Assignments Chart */}
-        
+
 
         {/* New: Calls Trend Chart */}
-       
+
         {/* Existing sections (table versions remain for detail) */}
         {dashboard && (
           <div className="box">

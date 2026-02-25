@@ -5,8 +5,8 @@ const EmployeeHeader = () => {
   };
 
   return (
-    <div className="employee-header">
-      <h2>📞 Employee Calling Panel</h2>
+    <div className="employee-header mb-6">
+      <h2>📞 Calling Panel</h2>
       <button className="logout-btn" onClick={handleLogout}>Logout</button>
     </div>
   );

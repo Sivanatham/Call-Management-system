@@ -267,15 +267,20 @@ const AdminPanel = () => {
               employees={employees}
               onAddMember={() => loadEmployees()}
             />
+            <EmployeeForm onSubmit={handleAddEmployee} />
+          </div>
+        )}
+
+        {activeSection === "assignedTasks" && (
+          <div className="space-y-6">
             <ExcelUpload
               teams={teams}
               onSubmit={handleExcelUpload}
             />
-            <EmployeeForm onSubmit={handleAddEmployee} />
-            
           </div>
         )}
-              {activeSection === "addCustomer" && (
+
+        {activeSection === "addCustomer" && (
         <div className="space-y-6">
           <CustomerForm onSubmit={handleAddCustomer} />
         </div>

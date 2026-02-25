@@ -82,7 +82,7 @@ const CustomerForm = () => {
         {/* Phone */}
         <div className="form-input-with-icon">
           <Phone className="icon" size={20} />
-          <input
+         <input
   name="phone"
   placeholder="Phone"
   value={formData.phone}
@@ -96,7 +96,7 @@ const CustomerForm = () => {
   inputMode="numeric"
   pattern="\d{10}"
   required
-  style={inputStyle}
+  className="form-input"
 />
         </div>
 

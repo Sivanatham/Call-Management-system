@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Users, Plus, UserPlus } from "lucide-react";
+import { IoIosArrowDown } from "react-icons/io";
 
 const TeamManagement = ({ teams, employees }) => {
   const token = localStorage.getItem("token");
-
-
-
   const [teamName, setTeamName] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState([]); // 🔥 array now
   const [loading, setLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [message, setMessage] = useState("");
 
   // =========================
   // Fetch Teams
@@ -37,9 +36,11 @@ const TeamManagement = ({ teams, employees }) => {
   // Create Team
   // =========================
   const handleCreateTeam = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
+  setMessage(""); // clear old message
 
+  try {
     const res = await fetch("http://localhost:8000/teams/", {
       method: "POST",
       headers: {
@@ -51,11 +52,17 @@ const TeamManagement = ({ teams, employees }) => {
 
     if (res.ok) {
       setTeamName("");
+      setMessage("✅ Team Created. Refresh To See");
       fetchTeams();
+    } else {
+      setMessage("❌ Try Again");
     }
+  } catch (error) {
+    setMessage("❌ Try Again");
+  }
 
-    setLoading(false);
-  };
+  setLoading(false);
+};
 
   // =========================
   // Checkbox Toggle
@@ -132,23 +139,34 @@ const TeamManagement = ({ teams, employees }) => {
           >
             <input
               type="text"
-              placeholder="Enter Team Name"
+              placeholder="Enter Team Name "
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               required
               className="form-input w-full"
             />
-
+            {message && (
+  <p style={{ 
+    marginTop: "10px",
+    paddingBottom: "8px", 
+    fontWeight: "bold", 
+    color: message.includes("Created") ? "green" : "red" 
+  }}>
+    {message}
+  </p>
+)}
             <button
               type="submit"
-              className="btn-primary w-full sm:w-auto"
+              className="btn-primary w-full sm:w-auto  p-5 "
               disabled={loading}
             >
               <Plus size={18} className="inline mr-2" />
               Create
             </button>
+            
           </form>
         </div>
+        
 
         {/* ================= Assign Employees ================= */}
         <div>
@@ -187,11 +205,11 @@ const TeamManagement = ({ teams, employees }) => {
         : `${selectedEmployees.length} Selected`}
     </span>
 
-    <span className="text-gray-500">▾</span>
+    <span className="text-gray-500"><IoIosArrowDown /></span>
   </div>
 
   {isDropdownOpen && (
-    <div className="absolute z-50 bg-white border border-gray-300 rounded-md mt-2 w-full shadow-lg">
+    <div className="absolute z-50 bg-white border border-gray-300 rounded-md mt-2 w-full shadow-lg p-3 overflow-y-auto" style={{height: '250px'}}>
 
       <input
         type="text"

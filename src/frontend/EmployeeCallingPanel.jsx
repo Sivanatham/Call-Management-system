@@ -4,25 +4,28 @@ import EmployeeProfile from "./emp_comp/EmployeeProfile";
 import SearchBar from "./emp_comp/SearchBar";
 import CustomerCard from "./emp_comp/CustomerCard";
 import TeamSection from "./emp_comp/TeamSection";
+import CustomerForm from "./admin compounds/CustomerForm";
+import ExcelUpload from "./admin compounds/ExcelUpload";
+import EmployeeSidebar from "./emp_comp/EmployeeSidebar";
 import api from "./api";
 import "./emp.css";
 
 function EmployeeCallingPanel() {
-
   /* ===============================
      STATE
   =============================== */
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [customers, setCustomers] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [search, setSearch] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [callHistory, setCallHistory] = useState([]);
   const [teamData, setTeamData] = useState(null);
-
   const [employeeProfile, setEmployeeProfile] = useState({
     id: null,
     name: "Employee",
     phone: "---",
-    team: "Team"
   });
 
   const [progress, setProgress] = useState({
@@ -30,6 +33,21 @@ function EmployeeCallingPanel() {
     completed: 0,
     pending: 0
   });
+
+  /* ===============================
+     RESPONSIVE CHECK
+  =============================== */
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   /* ===============================
      LOAD PROFILE
@@ -41,7 +59,6 @@ function EmployeeCallingPanel() {
         id: res.data.id,
         name: res.data.name,
         phone: res.data.phone,
-        team: res.data.team_name || "No Team"
       });
     } catch (err) {
       console.log("Profile error", err);
@@ -49,7 +66,19 @@ function EmployeeCallingPanel() {
   };
 
   /* ===============================
-     LOAD ASSIGNED TASKS
+     LOAD TEAMS
+  =============================== */
+  const loadTeams = async () => {
+    try {
+      const res = await api.get("/teams/");
+      setTeams(res.data);
+    } catch (err) {
+      console.log("Teams load error", err);
+    }
+  };
+
+  /* ===============================
+     LOAD TASKS
   =============================== */
   const loadCustomers = async () => {
     try {
@@ -61,20 +90,17 @@ function EmployeeCallingPanel() {
   };
 
   /* ===============================
-     LOAD PROGRESS (COUNTS)
+     LOAD PROGRESS
   =============================== */
   const loadProgress = async () => {
     try {
       const res = await api.get("/calls/my-progress");
-
       setCallHistory(res.data.calls);
-
       setProgress({
         total: res.data.total_calls,
         completed: res.data.completed_calls,
         pending: res.data.pending_calls
       });
-
     } catch (err) {
       console.log("Progress load error", err);
     }
@@ -93,24 +119,35 @@ function EmployeeCallingPanel() {
   };
 
   /* ===============================
-     INITIAL LOAD + AUTO REFRESH
+     BULK UPLOAD
   =============================== */
-  useEffect(() => {
-    loadProfile();
-    loadCustomers();
-    loadProgress();
-    loadTeamInfo();
+  const handleExcelUpload = async (data) => {
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", data.file);
 
-    const interval = setInterval(() => {
-      loadCustomers();
-      loadProgress();
-    }, 5000);
+      const uploadRes = await fetch("http://localhost:8000/calls/bulk", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
 
-    return () => clearInterval(interval);
-  }, []);
+      if (!uploadRes.ok) {
+        alert("Excel upload failed");
+        return;
+      }
+
+      alert("Excel uploaded successfully");
+      await loadCustomers();
+      await loadProgress();
+    } catch {
+      alert("Upload error");
+    }
+  };
 
   /* ===============================
-     UPDATE TASK STATUS
+     UPDATE TASK
   =============================== */
   const handleSaveCall = async (customerData, status, duration, feedback) => {
     try {
@@ -120,162 +157,260 @@ function EmployeeCallingPanel() {
         remarks: feedback
       });
 
-      // 🔥 Instant UI Update (No waiting 5 sec)
-      loadCustomers();
-      loadProgress();
-      loadTeamInfo(); 
-
+      await loadCustomers();
+      await loadProgress();
       alert("Task Updated Successfully");
-
     } catch (err) {
       console.log("Update error", err);
     }
   };
 
   /* ===============================
-     SEARCH FILTER
+     INITIAL LOAD
   =============================== */
+  useEffect(() => {
+    loadProfile();
+    loadCustomers();
+    loadProgress();
+    loadTeamInfo();
+    loadTeams();
+
+    const interval = setInterval(() => {
+      loadCustomers();
+      loadProgress();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const filtered = customers.filter((c) =>
     c.customer_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  /* ===============================
+     MOBILE OVERLAY
+  =============================== */
+  const closeSidebar = () => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
+  /* ===============================
+     UI
+  =============================== */
   return (
-    <div style={{ minHeight: "100vh", background: darkMode ? "#1a202c" : "#f7fafc" }}>
+    <>
+      {/* MOBILE MENU BUTTON */}
+      {isMobile && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            zIndex: 1001,
+            background: '#1e293b',
+            color: 'white',
+            border: 'none',
+            padding: '12px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          }}
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
+      )}
 
-      <EmployeeHeader />
+      {/* SIDEBAR */}
+      <EmployeeSidebar
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        isMobile={isMobile}
+      />
 
-      <div className="employee-container">
+      {/* MOBILE OVERLAY */}
+      {isMobile && sidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 998,
+            cursor: 'pointer'
+          }}
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* MAIN CONTENT */}
+      <div
+        style={{
+          marginLeft: isMobile ? 0 : "250px",
+          width: isMobile ? "100%" : "calc(100% - 240px)",
+          minHeight: "100vh",
+          background: darkMode ? "#1a202c" : "#f7fafc",
+          padding: isMobile ? "80px 20px 20px" : "20px",
+          transition: 'margin-left 0.3s ease',
+          position: 'relative',
+        }}
+      >
+        <EmployeeHeader closeSidebar={closeSidebar} />
 
         <div style={{ textAlign: "right", marginBottom: "20px" }}>
-          <button onClick={() => setDarkMode(!darkMode)}>
+          <button 
+            onClick={() => setDarkMode(!darkMode)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+              background: darkMode ? '#334155' : 'white',
+              color: darkMode ? 'white' : '#1e293b',
+              cursor: 'pointer'
+            }}
+          >
             {darkMode ? "☀️ Light" : "🌙 Dark"}
           </button>
         </div>
 
-        <EmployeeProfile
-          name={employeeProfile.name}
-          phone={employeeProfile.phone}
-          // team={employeeProfile.team}
-        />
+        {/* DASHBOARD */}
+        {activeSection === "dashboard" && (
+          <>
+            <EmployeeProfile
+              name={employeeProfile.name}
+              phone={employeeProfile.phone}
+            />
 
-        <TeamSection teamData={teamData} darkMode={darkMode} />
+            <TeamSection teamData={teamData} darkMode={darkMode} />
 
-        {/* ===============================
-            LIVE PROGRESS CARDS
-        =============================== */}
-        <div style={{
-          display: "flex",
-          gap: "20px",
-          marginBottom: "20px"
-        }}>
+            {/* PROGRESS CARDS */}
+            <div style={{ 
+              display: "flex", 
+              gap: "20px", 
+              marginBottom: "20px",
+              flexWrap: 'wrap'
+            }}>
+              <Card title="Total" value={progress.total} color="#2563eb" />
+              <Card title="Completed" value={progress.completed} color="#16a34a" />
+              <Card title="Pending" value={progress.pending} color="#f59e0b" />
+            </div>
 
-          <div style={{
-            background: "#2563eb",
-            color: "white",
-            padding: "15px",
-            borderRadius: "10px",
-            flex: 1,
-            textAlign: "center"
-          }}>
-            <h3>Total</h3>
-            <h2>{progress.total}</h2>
-          </div>
+            <SearchBar value={search} onChange={setSearch} darkMode={darkMode} />
 
-          <div style={{
-            background: "#16a34a",
-            color: "white",
-            padding: "15px",
-            borderRadius: "10px",
-            flex: 1,
-            textAlign: "center"
-          }}>
-            <h3>Completed</h3>
-            <h2>{progress.completed}</h2>
-          </div>
-
-          <div style={{
-            background: "#f59e0b",
-            color: "white",
-            padding: "15px",
-            borderRadius: "10px",
-            flex: 1,
-            textAlign: "center"
-          }}>
-            <h3>Pending</h3>
-            <h2>{progress.pending}</h2>
-          </div>
-
-        </div>
-
-        <SearchBar value={search} onChange={setSearch} darkMode={darkMode} />
-
-        {/* ===============================
-            TASK LIST
-        =============================== */}
-        {filtered.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            background: darkMode ? '#374151' : 'white',
-            borderRadius: '12px',
-            marginTop: '20px'
-          }}>
-            <p style={{ fontSize: '18px' }}>
-              {customers.length === 0
-                ? '📋 No tasks assigned yet'
-                : '🔍 No tasks match your search'}
-            </p>
-          </div>
-        ) : (
-          <div className="customer-grid">
-            {filtered.map((cust) => (
-              <CustomerCard
+            <div 
+              className="customer-grid"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                gap: '20px',
+                '@media (max-width: 768px)': {
+                  gridTemplateColumns: '1fr'
+                }
+              }}
+            >
+              {filtered.map((cust) => (
+                <CustomerCard
                   key={cust.id}
                   data={{
                     id: cust.id,
                     name: cust.customer_name,
                     phone: cust.phone,
-                    campaign: cust.campaign,   // ✅ ADD THIS
+                    campaign: cust.campaign,
                     assignedDate: cust.start_time?.split("T")[0] || "-",
                     isTeamTask: cust.assigned_to_id !== employeeProfile.id
                   }}
                   onSave={handleSaveCall}
                   darkMode={darkMode}
-/>
-            ))}
-          </div>
+                />
+              ))}
+            </div>
+          </>
         )}
 
-        {/* ===============================
-            TASK HISTORY
-        =============================== */}
-        <div style={{ marginTop: "40px" }}>
-          <h2>📋 Task History</h2>
-          <table width="100%" border="1" cellPadding="8">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Status</th>
-                <th>Duration</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {callHistory.map((call) => (
-                <tr key={call.id}>
-                  <td>{call.customer_name}</td>
-                  <td>{call.status}</td>
-                  <td>{call.duration}</td>
-                  <td>{call.remarks}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* ADD CUSTOMER */}
+        {activeSection === "addCustomer" && (
+          <CustomerForm />
+        )}
 
+        {/* BULK UPLOAD */}
+        {activeSection === "bulkUpload" && (
+          <ExcelUpload
+            teams={teams}
+            onSubmit={handleExcelUpload}
+          />
+        )}
+
+        {/* HISTORY */}
+        {activeSection === "history" && (
+          <div style={{ maxWidth: '1200px' }}>
+            <h2 style={{ marginBottom: '20px' }}>📋 Task History</h2>
+            <div style={{ 
+              overflowX: 'auto',
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0)'
+            }}>
+              <table 
+                style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse',
+                  minWidth: '600px',
+                  background: darkMode ? '#334155' : 'white'
+                }}
+              >
+                <thead>
+                  <tr style={{ background: '#1e293b' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#fff' }}>Customer</th>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#fff' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#fff' }}>Duration</th>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#fff' }}>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {callHistory.map((call) => (
+                    <tr 
+                      key={call.id}
+                      style={{
+                        borderBottom: '1px solid #e2e8f0'
+                      }}
+                    >
+                      <td style={{ padding: '12px' }}>{call.customer_name}</td>
+                      <td style={{ padding: '12px' }}>{call.status}</td>
+                      <td style={{ padding: '12px' }}>{call.duration}</td>
+                      <td style={{ padding: '12px' }}>{call.remarks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
+
+/* SIMPLE CARD COMPONENT */
+const Card = ({ title, value, color }) => (
+  <div style={{
+    background: `linear-gradient(135deg, ${color}, ${color}cc)`,
+    color: "white",
+    padding: "20px",
+    borderRadius: "12px",
+    flex: "1",
+    textAlign: "center",
+    minWidth: '200px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+  }}>
+    <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', opacity: 0.9 }}>{title}</h3>
+    <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{value}</h2>
+  </div>
+);
 
 export default EmployeeCallingPanel;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, UserCheck, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, CheckCircle, Clock, AlertCircle, TrendingUp, Users2Icon } from 'lucide-react';
 
 const DashboardCards = ({ stats }) => {
   const cards = [
@@ -41,7 +41,7 @@ const DashboardCards = ({ stats }) => {
     {
       title: 'Total Employees',
       value: stats.employees || 0,
-      icon: UserCheck,
+      icon: Users2Icon,
       color: 'indigo',
       description: 'Active employees'
     },
@@ -55,7 +55,7 @@ const DashboardCards = ({ stats }) => {
     {
       title: 'Total Teams',
       value: stats.teams || 0,
-      icon: Users,
+      icon: CheckCircle,
       color: 'pink',
       description: 'Active teams'
     }
