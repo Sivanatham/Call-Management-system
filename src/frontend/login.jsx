@@ -54,7 +54,7 @@ function Login() {
       <div className="login-wrapper">
         
         <div className="left-panel">
-          <h1>Welcome back!</h1>
+          <h1>Call Management</h1>
           <p>You can sign in to access your existing account.</p>
         </div>
 

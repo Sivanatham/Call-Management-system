@@ -50,7 +50,7 @@ const ExcelUpload = ({ onSubmit }) => {
   };
 
   return (
-    <div className="glass-effect rounded-xl p-6 card-hover border border-gray-200">
+    <div className="glass-effect rounded-xl p-6 card-hover border border-gray-200 " style={{ marginTop: "70px" }}>
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-orange-500 text-white rounded-lg">
           <FileSpreadsheet size={24} />

@@ -128,7 +128,7 @@ const Sidebar = ({ activeSection, onSectionChange, isMobileMenuOpen, onMobileMen
 
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2" style={{ marginTop: "40px" }}>
             <BarChart3 size={24} /> Manager
           </h2>
         </div>
