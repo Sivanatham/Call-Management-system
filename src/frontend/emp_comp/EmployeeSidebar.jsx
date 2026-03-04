@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, UserPlus, Upload, History } from "lucide-react";
+import { LayoutDashboard, UserPlus, Upload, History, CheckSquare } from "lucide-react";
 
 const EmployeeSidebar = ({
   activeSection,
@@ -10,6 +10,7 @@ const EmployeeSidebar = ({
 }) => {
   const menuItems = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    // { key: "assignTask", label: "Assign Task", icon: CheckSquare },
     { key: "addCustomer", label: "Add Customer", icon: UserPlus },
     { key: "bulkUpload", label: "Bulk Upload", icon: Upload },
     { key: "history", label: "Task History", icon: History },

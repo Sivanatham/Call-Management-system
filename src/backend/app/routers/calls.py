@@ -51,16 +51,21 @@ def read_calls(
 @router.get("/my", response_model=List[CallResponse])
 def my_calls(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
 
-    if current_user.role == UserRole.MANAGER:
-        return db.query(Call).all()
+    query = db.query(Call)
 
-    if current_user.team_id:
-        return db.query(Call).filter(
-            (Call.assigned_to_id == current_user.id) |
-            (Call.team_id == current_user.team_id)
-        ).all()
+    if current_user.role != UserRole.MANAGER:
+        if current_user.team_id:
+            query = query.filter(
+                (Call.assigned_to_id == current_user.id) |
+                (Call.team_id == current_user.team_id)
+            )
+        else:
+            query = query.filter(Call.assigned_to_id == current_user.id)
 
-    return db.query(Call).filter(Call.assigned_to_id == current_user.id).all()
+    # 🔥 show only pending tasks
+    query = query.filter(Call.status == CallStatus.PENDING)
+
+    return query.all()
 
 @router.get("/my-progress")
 def my_progress(
@@ -90,7 +95,7 @@ def my_progress(
         Call.status != CallStatus.CONNECTED
     ).count()
 
-    calls = query.order_by(Call.id.desc()).limit(20).all()
+    calls = query.order_by(Call.id.desc()).limit(500).all()
 
     return {
         "total_calls": total_calls,
@@ -146,40 +151,6 @@ def update_call(
 
     return call
 
-@router.post("/", response_model=CallResponse)
-def create_call_api(
-    call: CallCreate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
-):
-
-    # Validate priority safely
-    try:
-        priority_enum = Priority[call.priority.name] if isinstance(call.priority, Priority) else Priority[call.priority]
-    except KeyError:
-        raise HTTPException(status_code=400, detail="Invalid priority")
-
-    new_call = Call(
-        customer_name=call.customer_name,
-        phone=call.phone,
-        priority=priority_enum,
-        campaign=call.campaign,
-        remarks=call.remarks,
-        status=CallStatus.PENDING
-    )
-
-    db.add(new_call)
-    db.commit()
-    db.refresh(new_call)
-
-    log_manager_action(
-        db,
-        manager_id=current_user.id,
-        action_type="CREATE_CALL",
-        details=f"Call {new_call.customer_name} created"
-    )
-
-    return new_call
 # =====================================================
 # CREATE CALL (Manager Only)
 # =====================================================
@@ -198,7 +169,6 @@ def bulk_upload_calls(
 
         required_columns = ["customer_name", "phone", "priority", "campaign"]
 
-        # Check required columns
         for col in required_columns:
             if col not in df.columns:
                 raise HTTPException(status_code=400, detail=f"Missing column: {col}")
@@ -208,12 +178,11 @@ def bulk_upload_calls(
 
         for index, row in df.iterrows():
             try:
-                # Validate required fields
+
                 if pd.isna(row["customer_name"]) or pd.isna(row["phone"]):
                     skipped_rows.append(f"Row {index+2}: Missing name or phone")
                     continue
 
-                # Validate priority safely
                 try:
                     priority_enum = Priority[str(row["priority"]).upper()]
                 except:
@@ -226,7 +195,9 @@ def bulk_upload_calls(
                     priority=priority_enum,
                     campaign=row.get("campaign"),
                     remarks=row.get("remarks"),
-                    status=CallStatus.PENDING
+                    status=CallStatus.PENDING,
+                    assigned_to_id=current_user.id,
+                    team_id=current_user.team_id
                 )
 
                 db.add(new_call)
@@ -257,7 +228,6 @@ def create_call_api(
     current_user=Depends(get_current_user)
 ):
 
-    # Allow only Manager & Employee
     if current_user.role not in [UserRole.MANAGER, UserRole.EMPLOYEE]:
         raise HTTPException(status_code=403, detail="Not allowed")
 
@@ -272,20 +242,16 @@ def create_call_api(
         priority=priority_enum,
         campaign=call.campaign,
         remarks=call.remarks,
-        status=CallStatus.PENDING
+        status=CallStatus.PENDING,
+        assigned_to_id=current_user.id,
+        team_id=current_user.team_id
     )
-
-    # 🔥 If employee creates → assign to their team
-    if current_user.role == UserRole.EMPLOYEE:
-        new_call.team_id = current_user.team_id
-        new_call.assigned_to_id = current_user.id  # optional: assign to self
 
     db.add(new_call)
     db.commit()
     db.refresh(new_call)
 
     return new_call
-
 
 
 

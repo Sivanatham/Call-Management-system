@@ -199,43 +199,54 @@ const AdminPanel = () => {
 };
 
 
-  const handleExcelUpload = async (data) => {
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("file", data.file);
+ const handleExcelUpload = async (data) => {
+  try {
+    const token = localStorage.getItem("token");
 
-      const uploadRes = await fetch("http://localhost:8000/calls/bulk", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        alert("Excel upload failed");
-        return;
-      }
-
-      const callsRes = await api.get("/calls/");
-      const calls = callsRes.data;
-
-      for (const call of calls) {
-        if (!call.assigned_to_id) {
-          await api.post("/teams/assign-task", {
-            team_id: parseInt(data.teamId),
-            call_id: call.id
-          });
-        }
-      }
-
-      await loadCustomers();
-      await loadDashboard();
-
-      alert("Excel uploaded and tasks assigned!");
-    } catch (err) {
-      alert("Something went wrong during Excel upload or task assignment");
+    if (!data.file) {
+      alert("Please select an Excel file");
+      return;
     }
-  };
+
+    const formData = new FormData();
+    formData.append("file", data.file);
+
+    const uploadRes = await fetch("http://localhost:8000/calls/bulk", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json();
+      alert(err.detail);
+      return;
+    }
+
+    const callsRes = await api.get("/calls/");
+    const calls = callsRes.data;
+
+    for (const call of calls) {
+      if (!call.assigned_to_id) {
+        await api.post("/teams/assign-task", {
+          team_id: parseInt(data.teamId),
+          call_id: call.id
+        });
+      }
+    }
+
+    await loadCustomers();
+    await loadDashboard();
+
+    alert("Excel uploaded and tasks assigned!");
+
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong during Excel upload or task assignment");
+  }
+};
 
   // ===============================
   // RENDER
